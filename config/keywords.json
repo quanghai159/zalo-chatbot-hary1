@@ -2,31 +2,26 @@
   "keywords": [
     {
       "keyword": "xin chào",
-      "reply": "Xin chào! Tôi là bot hỗ trợ. Bạn cần giúp gì?",
+      "reply": "Xin chào! Bạn đã sử dụng đúng cú pháp.",
+      "exactMatch": true
+    },
+    {
+      "keyword": "giá sản phẩm",
+      "reply": "Bảng giá sản phẩm:\n- Sản phẩm A: 100k\n- Sản phẩm B: 200k",
       "exactMatch": false
     },
     {
-      "keyword": "giá",
-      "reply": "Bạn muốn hỏi về giá sản phẩm nào? Vui lòng cho tôi biết tên sản phẩm.",
-      "exactMatch": false
+      "keyword": "liên hệ",
+      "reply": "Thông tin liên hệ:\n📞 0123.456.789\n📧 support@company.com",
+      "exactMatch": true
     },
     {
-      "keyword": "hỗ trợ",
-      "reply": "Tôi có thể giúp bạn:\n- Tư vấn sản phẩm\n- Hướng dẫn sử dụng\n- Giải đáp thắc mắc\nBạn cần hỗ trợ gì?",
-      "exactMatch": false
-    },
-    {
-      "keyword": "cảm ơn",
-      "reply": "Không có gì! Rất vui được giúp đỡ bạn. Có gì cần hỗ trợ thêm không?",
-      "exactMatch": false
-    },
-    {
-      "keyword": "tạm biệt",
-      "reply": "Tạm biệt! Chúc bạn một ngày tốt lành. Hẹn gặp lại! 👋",
+      "keyword": "hỗ trợ kỹ thuật",
+      "reply": "Hỗ trợ kỹ thuật:\n1. Kiểm tra kết nối\n2. Restart thiết bị\n3. Liên hệ hotline",
       "exactMatch": false
     }
   ],
-  "defaultReply": "Xin chào bạn, đây là ChatBot trả lời tự động, hiện tại tôi đang bận, tôi đã nhận được tin nhắn và sẽ phản hồi trong thời gian sớm nhất!",
+  "defaultReply": "Xin chào! Vui lòng sử dụng cú pháp chính xác.",
   "settings": {
     "autoReply": true,
     "replyDelay": 1000,
