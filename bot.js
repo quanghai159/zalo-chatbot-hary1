@@ -214,7 +214,7 @@ async function startBot() {
             console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
 
             // Tạo QR URL ngay lập tức
-            console.log("🔍 Đang tạo QR code...");
+            console.log("🔍 [New] Đang tạo QR code...");
             
             api = await zalo.loginQR();
             
