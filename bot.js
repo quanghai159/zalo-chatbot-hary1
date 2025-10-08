@@ -209,6 +209,15 @@ async function startBot() {
             console.log("👉 Mở file 'qr.png' trong thư mục dự án");
             console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
 
+            // Thêm listener để hiển thị QR code URL
+            zalo.on("qr", (qr) => {
+                console.log("\n" + "=".repeat(60));
+                console.log("🔗 QR CODE URL:");
+                console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
+                console.log("\n👆 Copy URL trên, paste vào trình duyệt để thấy QR code!");
+                console.log("=".repeat(60) + "\n");
+            });
+
             api = await zalo.loginQR();
 
             // Lưu session sau khi login thành công
