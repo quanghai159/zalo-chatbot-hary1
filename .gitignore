@@ -1,0 +1,8 @@
+node_modules/
+qr.png
+*.old
+*.backup
+.DS_Store
+.env
+session
+zalo-session.json
