@@ -172,17 +172,34 @@ async function startBot() {
             console.log("👉 Mở file 'qr.png' trong thư mục dự án");
             console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
 
-            // Lắng nghe sự kiện QR code để hiển thị URL
-            zalo.on("qr", (qr) => {
-                console.log("\n" + "=".repeat(60));
-                console.log("🔗 QR CODE URL:");
-                console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
-                console.log("\n👆 Copy URL trên, paste vào trình duyệt để thấy QR code!");
-                console.log("📱 HOẶC mở file 'qr.png' trong thư mục");
-                console.log("=".repeat(60) + "\n");
-            });
-
+            // Tạo QR URL tự động
+            console.log("🔍 Đang tạo QR code...");
+            
             api = await zalo.loginQR();
+            
+            // Tạo QR URL sau khi file qr.png được tạo
+            setTimeout(async () => {
+                try {
+                    const qrPath = path.join(__dirname, 'qr.png');
+                    if (fs.existsSync(qrPath)) {
+                        // Đọc file QR và tạo URL
+                        const qrData = fs.readFileSync(qrPath);
+                        const base64QR = qrData.toString('base64');
+                        
+                        console.log("\n" + "=".repeat(60));
+                        console.log("🔗 QR CODE URL:");
+                        console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(base64QR)}`);
+                        console.log("\n👆 COPY URL TRÊN, DÁN VÀO TRÌNH DUYỆT ĐỂ XEM QR!");
+                        console.log("📱 Hoặc mở file 'qr.png' nếu đang chạy local");
+                        console.log("=".repeat(60) + "\n");
+                    } else {
+                        console.log("⚠️ File qr.png chưa được tạo, thử lại sau...");
+                    }
+                } catch (error) {
+                    console.log("⚠️ Không thể tạo QR URL:", error.message);
+                    console.log("💡 Hãy mở file 'qr.png' trực tiếp");
+                }
+            }, 3000); // Đợi 3 giây để file QR được tạo
 
             // Lưu session sau khi login thành công
             if (api && api.getContext) {
