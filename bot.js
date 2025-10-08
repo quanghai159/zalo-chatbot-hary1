@@ -130,7 +130,11 @@ function logMessage(message, threadId, threadType, isOutgoing = false) {
 function generateQRUrl() {
     try {
         const qrPath = path.join(__dirname, 'qr.png');
+        console.log(`🔍 Kiểm tra file QR tại: ${qrPath}`);
+        
         if (fs.existsSync(qrPath)) {
+            console.log("✅ Tìm thấy file qr.png");
+            
             // Đọc file QR và tạo URL
             const qrData = fs.readFileSync(qrPath);
             const base64QR = qrData.toString('base64');
@@ -142,10 +146,21 @@ function generateQRUrl() {
             console.log("📱 Hoặc mở file 'qr.png' nếu đang chạy local");
             console.log("=".repeat(60) + "\n");
             return true;
+        } else {
+            console.log(`❌ Không tìm thấy file qr.png tại: ${qrPath}`);
+            
+            // Liệt kê tất cả file trong thư mục để debug
+            try {
+                const files = fs.readdirSync(__dirname);
+                console.log("📁 Files trong thư mục:", files);
+            } catch (listError) {
+                console.log("❌ Không thể liệt kê files:", listError.message);
+            }
+            return false;
         }
-        return false;
     } catch (error) {
         console.log("⚠️ Không thể tạo QR URL:", error.message);
+        console.log("📋 Error details:", error);
         return false;
     }
 }
@@ -192,7 +207,7 @@ async function startBot() {
             }
         }
 
-                // Nếu không có session hoặc session hết hạn → Quét QR
+        // Nếu không có session hoặc session hết hạn → Quét QR
         if (!api) {
             console.log("📱 QUÉT QR CODE:");
             console.log("👉 Mở file 'qr.png' trong thư mục dự án");
@@ -206,21 +221,37 @@ async function startBot() {
             // Tạo QR URL ngay sau khi loginQR() hoàn thành
             console.log("🔄 Đang tạo QR URL...");
 
-            // Thử tạo QR URL nhiều lần
+            // Thử tạo QR URL nhiều lần với debug chi tiết
             let qrUrlCreated = false;
             for (let i = 0; i < 5; i++) {
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi 1 giây
+                console.log(`🔄 Thử lần ${i + 1}/5...`);
                 
                 if (generateQRUrl()) {
                     qrUrlCreated = true;
                     break;
                 }
-                console.log(`🔄 Thử lần ${i + 1}/5...`);
+                
+                // Đợi 2 giây giữa các lần thử
+                if (i < 4) { // Không đợi ở lần cuối
+                    console.log("⏳ Đợi 2 giây...");
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
             }
 
             if (!qrUrlCreated) {
-                console.log("⚠️ Không thể tạo QR URL từ file");
-                console.log("💡 Hãy mở file 'qr.png' trực tiếp nếu có");
+                console.log("⚠️ Không thể tạo QR URL từ file sau 5 lần thử");
+                console.log("💡 Có thể file qr.png không được tạo trên Render");
+                console.log("💡 Thử mở file 'qr.png' trực tiếp nếu có");
+                
+                // Debug: Kiểm tra quyền ghi file
+                try {
+                    const testFile = path.join(__dirname, 'test-write.txt');
+                    fs.writeFileSync(testFile, 'test');
+                    fs.unlinkSync(testFile);
+                    console.log("✅ Có quyền ghi file trong thư mục");
+                } catch (writeError) {
+                    console.log("❌ Không có quyền ghi file:", writeError.message);
+                }
             }
 
             // Lưu session sau khi login thành công
