@@ -1,0 +1,182 @@
+const { Zalo, ThreadType } = require("zca-js");
+const sharp = require("sharp");
+const fs = require("fs");
+const path = require("path");
+
+// Cấu hình image metadata getter
+async function imageMetadataGetter(filePath) {
+    try {
+        const data = await fs.promises.readFile(filePath);
+        const metadata = await sharp(data).metadata();
+        return {
+            height: metadata.height,
+            width: metadata.width,
+            size: metadata.size || data.length,
+        };
+    } catch (error) {
+        console.error("Error getting image metadata:", error);
+        return { height: 0, width: 0, size: 0 };
+    }
+}
+
+// Tải cấu hình từ file
+function loadConfig() {
+    try {
+        const configPath = path.join(__dirname, "config", "keywords.json");
+        const configData = fs.readFileSync(configPath, "utf8");
+        return JSON.parse(configData);
+    } catch (error) {
+        console.error("Error loading config:", error);
+        return {
+            keywords: [],
+            defaultReply: "Xin lỗi, có lỗi xảy ra.",
+            settings: { autoReply: true, replyDelay: 1000, logMessages: true }
+        };
+    }
+}
+
+// Tìm từ khóa khớp
+function findMatchingKeyword(message, keywords) {
+    const lowerMessage = message.toLowerCase().trim();
+    
+    for (const item of keywords) {
+        const keyword = item.keyword.toLowerCase();
+        
+        if (item.exactMatch) {
+            if (lowerMessage === keyword) {
+                return item;
+            }
+        } else {
+            if (lowerMessage.includes(keyword)) {
+                return item;
+            }
+        }
+    }
+    
+    return null;
+}
+
+// Ghi log tin nhắn
+function logMessage(message, threadId, threadType, isOutgoing = false) {
+    const timestamp = new Date().toLocaleString("vi-VN");
+    const direction = isOutgoing ? "OUT" : "IN";
+    const thread = threadType === ThreadType.User ? "User" : "Group";
+    
+    console.log(`[${timestamp}] ${direction} ${thread} [${threadId}]: ${message}`);
+}
+
+// Hàm chính
+async function startBot() {
+    console.log("🤖 Đang khởi động Zalo Bot...");
+    
+    // Tải cấu hình
+    const config = loadConfig();
+    console.log(`📝 Đã tải ${config.keywords.length} từ khóa`);
+    
+    // Khởi tạo Zalo
+    const zalo = new Zalo({
+        imageMetadataGetter,
+    });
+    
+    try {
+        // Đăng nhập bằng QR Code
+        console.log("📱 Vui lòng quét QR Code để đăng nhập...");
+        const api = await zalo.loginQR();
+        console.log("✅ Đăng nhập thành công!");
+        
+        // Lắng nghe tin nhắn
+        api.listener.on("message", async (message) => {
+            const isPlainText = typeof message.data.content === "string";
+            
+            // Bỏ qua tin nhắn của chính mình và tin nhắn không phải văn bản
+            if (message.isSelf || !isPlainText) return;
+            
+            const messageContent = message.data.content;
+            const threadId = message.threadId;
+            const threadType = message.type;
+            
+            // Ghi log tin nhắn đến
+            if (config.settings.logMessages) {
+                logMessage(messageContent, threadId, threadType);
+            }
+            
+            // Tìm từ khóa khớp
+            const matchedKeyword = findMatchingKeyword(messageContent, config.keywords);
+            
+            if (matchedKeyword) {
+                // Trả lời theo từ khóa
+                const replyMessage = matchedKeyword.reply;
+                
+                // Delay trước khi trả lời
+                if (config.settings.replyDelay > 0) {
+                    await new Promise(resolve => setTimeout(resolve, config.settings.replyDelay));
+                }
+                
+                try {
+                    await api.sendMessage(
+                        {
+                            msg: replyMessage,
+                            quote: message.data, // Reply tin nhắn gốc
+                        },
+                        threadId,
+                        threadType
+                    );
+                    
+                    console.log(`✅ Đã trả lời: "${replyMessage}"`);
+                    
+                    // Ghi log tin nhắn gửi
+                    if (config.settings.logMessages) {
+                        logMessage(replyMessage, threadId, threadType, true);
+                    }
+                    
+                } catch (error) {
+                    console.error("❌ Lỗi gửi tin nhắn:", error);
+                }
+                
+            } else if (config.settings.autoReply) {
+                // Trả lời mặc định
+                const defaultReply = config.defaultReply;
+                
+                // Delay trước khi trả lời
+                if (config.settings.replyDelay > 0) {
+                    await new Promise(resolve => setTimeout(resolve, config.settings.replyDelay));
+                }
+                
+                try {
+                    await api.sendMessage(
+                        {
+                            msg: defaultReply,
+                            quote: message.data,
+                        },
+                        threadId,
+                        threadType
+                    );
+                    
+                    console.log(`🤖 Đã trả lời mặc định: "${defaultReply}"`);
+                    
+                } catch (error) {
+                    console.error("❌ Lỗi gửi tin nhắn mặc định:", error);
+                }
+            }
+        });
+        
+        // Bắt đầu lắng nghe
+        api.listener.start();
+        console.log("🎧 Bot đang lắng nghe tin nhắn...");
+        console.log("💡 Gõ 'hỗ trợ' để xem các tính năng có sẵn");
+        console.log("🛑 Nhấn Ctrl+C để dừng bot");
+        
+    } catch (error) {
+        console.error("❌ Lỗi khởi động bot:", error);
+        process.exit(1);
+    }
+}
+
+// Xử lý tín hiệu dừng
+process.on('SIGINT', () => {
+    console.log("\n🛑 Đang dừng bot...");
+    process.exit(0);
+});
+
+// Khởi động bot
+startBot().catch(console.error);

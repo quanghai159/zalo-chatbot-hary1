@@ -1,0 +1,35 @@
+{
+  "keywords": [
+    {
+      "keyword": "xin chào",
+      "reply": "Xin chào! Tôi là bot hỗ trợ. Bạn cần giúp gì?",
+      "exactMatch": false
+    },
+    {
+      "keyword": "giá",
+      "reply": "Bạn muốn hỏi về giá sản phẩm nào? Vui lòng cho tôi biết tên sản phẩm.",
+      "exactMatch": false
+    },
+    {
+      "keyword": "hỗ trợ",
+      "reply": "Tôi có thể giúp bạn:\n- Tư vấn sản phẩm\n- Hướng dẫn sử dụng\n- Giải đáp thắc mắc\nBạn cần hỗ trợ gì?",
+      "exactMatch": false
+    },
+    {
+      "keyword": "cảm ơn",
+      "reply": "Không có gì! Rất vui được giúp đỡ bạn. Có gì cần hỗ trợ thêm không?",
+      "exactMatch": false
+    },
+    {
+      "keyword": "tạm biệt",
+      "reply": "Tạm biệt! Chúc bạn một ngày tốt lành. Hẹn gặp lại! 👋",
+      "exactMatch": false
+    }
+  ],
+  "defaultReply": "Xin chào bạn, đây là ChatBot trả lời tự động, hiện tại tôi đang bận, tôi đã nhận được tin nhắn và sẽ phản hồi trong thời gian sớm nhất!",
+  "settings": {
+    "autoReply": true,
+    "replyDelay": 1000,
+    "logMessages": true
+  }
+}
