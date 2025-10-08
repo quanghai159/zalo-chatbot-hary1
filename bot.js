@@ -125,6 +125,32 @@ function logMessage(message, threadId, threadType, isOutgoing = false) {
 }
 
 // ============================================================
+// FUNCTION TẠO QR URL
+// ============================================================
+function generateQRUrl() {
+    try {
+        const qrPath = path.join(__dirname, 'qr.png');
+        if (fs.existsSync(qrPath)) {
+            // Đọc file QR và tạo URL
+            const qrData = fs.readFileSync(qrPath);
+            const base64QR = qrData.toString('base64');
+            
+            console.log("\n" + "=".repeat(60));
+            console.log("🔗 QR CODE URL:");
+            console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(base64QR)}`);
+            console.log("\n👆 COPY URL TRÊN, DÁN VÀO TRÌNH DUYỆT ĐỂ XEM QR!");
+            console.log("📱 Hoặc mở file 'qr.png' nếu đang chạy local");
+            console.log("=".repeat(60) + "\n");
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.log("⚠️ Không thể tạo QR URL:", error.message);
+        return false;
+    }
+}
+
+// ============================================================
 // FUNCTION KHỞI ĐỘNG BOT
 // ============================================================
 async function startBot() {
@@ -178,30 +204,6 @@ async function startBot() {
             api = await zalo.loginQR();
             
             // Tạo QR URL ngay sau khi loginQR() hoàn thành
-            const generateQRUrl = () => {
-                try {
-                    const qrPath = path.join(__dirname, 'qr.png');
-                    if (fs.existsSync(qrPath)) {
-                        // Đọc file QR và tạo URL
-                        const qrData = fs.readFileSync(qrPath);
-                        const base64QR = qrData.toString('base64');
-                        
-                        console.log("\n" + "=".repeat(60));
-                        console.log("🔗 QR CODE URL:");
-                        console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(base64QR)}`);
-                        console.log("\n👆 COPY URL TRÊN, DÁN VÀO TRÌNH DUYỆT ĐỂ XEM QR!");
-                        console.log("📱 Hoặc mở file 'qr.png' nếu đang chạy local");
-                        console.log("=".repeat(60) + "\n");
-                        return true;
-                    }
-                    return false;
-                } catch (error) {
-                    console.log("⚠️ Không thể tạo QR URL:", error.message);
-                    return false;
-                }
-            };
-
-            // Thử tạo QR URL ngay lập tức
             if (!generateQRUrl()) {
                 // Nếu chưa có file, thử lại sau 2 giây
                 setTimeout(() => {
@@ -212,26 +214,6 @@ async function startBot() {
                 }, 2000);
             }
 
-            // Lưu session sau khi login thành công
-            if (api && api.getContext) {
-                try {
-                    const context = api.getContext();
-
-                    // Lưu TOÀN BỘ context
-                    const sessionData = {
-                        timestamp: Date.now(),
-                        loginMethod: "QR",
-                        context: context,
-                    };
-
-                    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
-                    console.log(`✅ Đã lưu session vào ${SESSION_FILE}`);
-                    console.log("💡 Lần sau sẽ tự động đăng nhập, không cần quét QR!\n");
-                } catch (err) {
-                    console.error("❌ Lỗi lưu session:", err.message);
-                }
-            }
-        }
             // Lưu session sau khi login thành công
             if (api && api.getContext) {
                 try {
