@@ -5,7 +5,7 @@ const path = require("path");
 const http = require("http");
 
 // ============================================================
-// HTTP SERVER ĐỂ KEEP-ALIVE TRÊN REPLIT
+// HTTP SERVER ĐỂ KEEP-ALIVE TRÊN REPLIT/RENDER
 // ============================================================
 const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -54,37 +54,6 @@ server.listen(PORT, () => {
 // CẤU HÌNH SESSION
 // ============================================================
 const SESSION_FILE = path.join(__dirname, "zalo-session.json");
-
-// Lưu session
-function saveSession(cookies, userAgent) {
-    try {
-        const sessionData = {
-            cookies,
-            userAgent,
-            timestamp: Date.now(),
-        };
-        fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
-        console.log("💾 Đã lưu session vào file: zalo-session.json");
-    } catch (error) {
-        console.error("❌ Lỗi lưu session:", error.message);
-    }
-}
-
-// Đọc session
-function loadSession() {
-    try {
-        if (fs.existsSync(SESSION_FILE)) {
-            const sessionData = JSON.parse(
-                fs.readFileSync(SESSION_FILE, "utf8"),
-            );
-            console.log("📂 Đã tìm thấy session cũ");
-            return sessionData;
-        }
-    } catch (error) {
-        console.error("❌ Lỗi đọc session:", error.message);
-    }
-    return null;
-}
 
 // ============================================================
 // FUNCTION XỬ LÝ METADATA ẢNH
@@ -152,9 +121,7 @@ function logMessage(message, threadId, threadType, isOutgoing = false) {
     const timestamp = new Date().toLocaleString("vi-VN");
     const direction = isOutgoing ? "📤 OUT" : "📥 IN";
     const thread = threadType === ThreadType.User ? "User" : "Group";
-    console.log(
-        `[${timestamp}] ${direction} ${thread} [${threadId}]: ${message}`,
-    );
+    console.log(`[${timestamp}] ${direction} ${thread} [${threadId}]: ${message}`);
 }
 
 // ============================================================
@@ -181,24 +148,20 @@ async function startBot() {
             console.log("🔐 Đang thử đăng nhập bằng session cũ...");
 
             try {
-                const sessionData = JSON.parse(
-                    fs.readFileSync(SESSION_FILE, "utf8"),
-                );
+                const sessionData = JSON.parse(fs.readFileSync(SESSION_FILE, "utf8"));
 
                 // Kiểm tra session hợp lệ (< 30 ngày)
                 const sessionAge = Date.now() - sessionData.timestamp;
                 if (sessionAge > 30 * 24 * 60 * 60 * 1000) {
-                    console.log(
-                        "⚠️  Session quá cũ (>30 ngày), cần quét QR lại",
-                    );
+                    console.log("⚠️  Session quá cũ (>30 ngày), cần quét QR lại");
                     fs.unlinkSync(SESSION_FILE);
                 } else {
                     // Đăng nhập bằng context
                     api = await zalo.login(sessionData.context);
-                    console.log("✅ Đăng nhập thành công bằng session!");
+                    console.log("✅ Đăng nhập thành công bằng session!\n");
                 }
             } catch (error) {
-                console.log("⚠️  Session hết hạn, cần quét QR lại...");
+                console.log("⚠️  Session hết hạn, cần quét QR lại...\n");
                 fs.unlinkSync(SESSION_FILE);
             }
         }
@@ -209,12 +172,13 @@ async function startBot() {
             console.log("👉 Mở file 'qr.png' trong thư mục dự án");
             console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
 
-            // Thêm listener để hiển thị QR code URL
+            // Lắng nghe sự kiện QR code để hiển thị URL
             zalo.on("qr", (qr) => {
                 console.log("\n" + "=".repeat(60));
                 console.log("🔗 QR CODE URL:");
                 console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`);
                 console.log("\n👆 Copy URL trên, paste vào trình duyệt để thấy QR code!");
+                console.log("📱 HOẶC mở file 'qr.png' trong thư mục");
                 console.log("=".repeat(60) + "\n");
             });
 
@@ -225,20 +189,18 @@ async function startBot() {
                 try {
                     const context = api.getContext();
 
-                    // Lưu TOÀN BỘ context (không chỉ cookies/userAgent)
+                    // Lưu TOÀN BỘ context
                     const sessionData = {
                         timestamp: Date.now(),
                         loginMethod: "QR",
                         context: context,
                     };
 
-                    fs.writeFileSync(
-                        SESSION_FILE,
-                        JSON.stringify(sessionData, null, 2),
-                    );
+                    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
                     console.log(`✅ Đã lưu session vào ${SESSION_FILE}`);
+                    console.log("💡 Lần sau sẽ tự động đăng nhập, không cần quét QR!\n");
                 } catch (err) {
-                    console.error("❌ Lỗi lưu session:", err);
+                    console.error("❌ Lỗi lưu session:", err.message);
                 }
             }
         }
@@ -254,9 +216,7 @@ async function startBot() {
 
             // CHỈ XỬ LÝ TIN NHẮN CÁ NHÂN
             if (message.type === ThreadType.Group) {
-                console.log(
-                    `🚫 BỎ QUA NHÓM [${message.threadId}]: ${message.data.content}`,
-                );
+                console.log(`🚫 BỎ QUA NHÓM [${message.threadId}]: ${message.data.content}`);
                 return;
             }
 
@@ -270,24 +230,19 @@ async function startBot() {
             }
 
             // Tìm từ khóa khớp
-            const matchedKeyword = findMatchingKeyword(
-                messageContent,
-                config.keywords,
-            );
+            const matchedKeyword = findMatchingKeyword(messageContent, config.keywords);
 
             // Trả lời theo từ khóa
             if (matchedKeyword) {
                 if (config.settings.replyDelay > 0) {
-                    await new Promise((resolve) =>
-                        setTimeout(resolve, config.settings.replyDelay),
-                    );
+                    await new Promise((resolve) => setTimeout(resolve, config.settings.replyDelay));
                 }
 
                 try {
                     await api.sendMessage(
                         { msg: matchedKeyword.reply, quote: message.data },
                         threadId,
-                        threadType,
+                        threadType
                     );
                     console.log(`✅ Đã trả lời: "${matchedKeyword.reply}"`);
 
@@ -301,16 +256,14 @@ async function startBot() {
             // Trả lời mặc định
             else if (config.settings.autoReply) {
                 if (config.settings.replyDelay > 0) {
-                    await new Promise((resolve) =>
-                        setTimeout(resolve, config.settings.replyDelay),
-                    );
+                    await new Promise((resolve) => setTimeout(resolve, config.settings.replyDelay));
                 }
 
                 try {
                     await api.sendMessage(
                         { msg: config.defaultReply, quote: message.data },
                         threadId,
-                        threadType,
+                        threadType
                     );
                     console.log(`🤖 Đã trả lời mặc định`);
 
@@ -318,10 +271,7 @@ async function startBot() {
                     await api.addUnreadMark(threadId, threadType);
                     console.log(`📌 Đã đánh dấu chưa đọc\n`);
                 } catch (error) {
-                    console.error(
-                        "❌ Lỗi khi trả lời mặc định:",
-                        error.message,
-                    );
+                    console.error("❌ Lỗi khi trả lời mặc định:", error.message);
                 }
             }
         });
