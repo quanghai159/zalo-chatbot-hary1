@@ -214,9 +214,26 @@ async function startBot() {
             console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
 
             // Tạo QR URL ngay lập tức
-            console.log("🔍 [New] Đang tạo QR code...");
+            console.log("🔍 Đang tạo QR code...");
             
-            api = await zalo.loginQR();
+            try {
+                // Thêm timeout cho loginQR()
+                const qrPromise = zalo.loginQR();
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('QR generation timeout after 30 seconds')), 30000);
+                });
+                
+                console.log("⏳ Đang chờ tạo QR code (timeout 30s)...");
+                api = await Promise.race([qrPromise, timeoutPromise]);
+                console.log("✅ QR code đã được tạo!");
+                
+            } catch (qrError) {
+                console.error("❌ Lỗi tạo QR code:", qrError.message);
+                console.log("💡 QR generation failed trên Render environment");
+                console.log("🔄 Bot sẽ dừng - cần dùng session từ Replit");
+                
+                throw qrError;
+            }
             
             // Tạo QR URL ngay sau khi loginQR() hoàn thành
             console.log("🔄 Đang tạo QR URL...");
