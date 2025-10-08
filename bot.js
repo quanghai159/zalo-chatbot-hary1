@@ -172,13 +172,13 @@ async function startBot() {
             console.log("👉 Mở file 'qr.png' trong thư mục dự án");
             console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
 
-            // Tạo QR URL tự động
+            // Tạo QR URL ngay lập tức
             console.log("🔍 Đang tạo QR code...");
             
             api = await zalo.loginQR();
             
-            // Tạo QR URL sau khi file qr.png được tạo
-            setTimeout(async () => {
+            // Tạo QR URL ngay sau khi loginQR() hoàn thành
+            const generateQRUrl = () => {
                 try {
                     const qrPath = path.join(__dirname, 'qr.png');
                     if (fs.existsSync(qrPath)) {
@@ -192,15 +192,46 @@ async function startBot() {
                         console.log("\n👆 COPY URL TRÊN, DÁN VÀO TRÌNH DUYỆT ĐỂ XEM QR!");
                         console.log("📱 Hoặc mở file 'qr.png' nếu đang chạy local");
                         console.log("=".repeat(60) + "\n");
-                    } else {
-                        console.log("⚠️ File qr.png chưa được tạo, thử lại sau...");
+                        return true;
                     }
+                    return false;
                 } catch (error) {
                     console.log("⚠️ Không thể tạo QR URL:", error.message);
-                    console.log("💡 Hãy mở file 'qr.png' trực tiếp");
+                    return false;
                 }
-            }, 3000); // Đợi 3 giây để file QR được tạo
+            };
 
+            // Thử tạo QR URL ngay lập tức
+            if (!generateQRUrl()) {
+                // Nếu chưa có file, thử lại sau 2 giây
+                setTimeout(() => {
+                    if (!generateQRUrl()) {
+                        console.log("⚠️ File qr.png chưa được tạo");
+                        console.log("💡 Hãy mở file 'qr.png' trực tiếp nếu có");
+                    }
+                }, 2000);
+            }
+
+            // Lưu session sau khi login thành công
+            if (api && api.getContext) {
+                try {
+                    const context = api.getContext();
+
+                    // Lưu TOÀN BỘ context
+                    const sessionData = {
+                        timestamp: Date.now(),
+                        loginMethod: "QR",
+                        context: context,
+                    };
+
+                    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
+                    console.log(`✅ Đã lưu session vào ${SESSION_FILE}`);
+                    console.log("💡 Lần sau sẽ tự động đăng nhập, không cần quét QR!\n");
+                } catch (err) {
+                    console.error("❌ Lỗi lưu session:", err.message);
+                }
+            }
+        }
             // Lưu session sau khi login thành công
             if (api && api.getContext) {
                 try {
