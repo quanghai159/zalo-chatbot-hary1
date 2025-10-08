@@ -192,7 +192,7 @@ async function startBot() {
             }
         }
 
-        // Nếu không có session hoặc session hết hạn → Quét QR
+                // Nếu không có session hoặc session hết hạn → Quét QR
         if (!api) {
             console.log("📱 QUÉT QR CODE:");
             console.log("👉 Mở file 'qr.png' trong thư mục dự án");
@@ -204,14 +204,23 @@ async function startBot() {
             api = await zalo.loginQR();
             
             // Tạo QR URL ngay sau khi loginQR() hoàn thành
-            if (!generateQRUrl()) {
-                // Nếu chưa có file, thử lại sau 2 giây
-                setTimeout(() => {
-                    if (!generateQRUrl()) {
-                        console.log("⚠️ File qr.png chưa được tạo");
-                        console.log("💡 Hãy mở file 'qr.png' trực tiếp nếu có");
-                    }
-                }, 2000);
+            console.log("🔄 Đang tạo QR URL...");
+
+            // Thử tạo QR URL nhiều lần
+            let qrUrlCreated = false;
+            for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi 1 giây
+                
+                if (generateQRUrl()) {
+                    qrUrlCreated = true;
+                    break;
+                }
+                console.log(`🔄 Thử lần ${i + 1}/5...`);
+            }
+
+            if (!qrUrlCreated) {
+                console.log("⚠️ Không thể tạo QR URL từ file");
+                console.log("💡 Hãy mở file 'qr.png' trực tiếp nếu có");
             }
 
             // Lưu session sau khi login thành công
