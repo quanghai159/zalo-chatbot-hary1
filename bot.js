@@ -5,7 +5,7 @@ const path = require("path");
 const http = require("http");
 
 // ============================================================
-// HTTP SERVER ĐỂ KEEP-ALIVE TRÊN REPLIT/RENDER
+// HTTP SERVER ĐỂ KEEP-ALIVE TRÊN RENDER
 // ============================================================
 const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -125,47 +125,6 @@ function logMessage(message, threadId, threadType, isOutgoing = false) {
 }
 
 // ============================================================
-// FUNCTION TẠO QR URL
-// ============================================================
-function generateQRUrl() {
-    try {
-        const qrPath = path.join(__dirname, 'qr.png');
-        console.log(`🔍 Kiểm tra file QR tại: ${qrPath}`);
-        
-        if (fs.existsSync(qrPath)) {
-            console.log("✅ Tìm thấy file qr.png");
-            
-            // Đọc file QR và tạo URL
-            const qrData = fs.readFileSync(qrPath);
-            const base64QR = qrData.toString('base64');
-            
-            console.log("\n" + "=".repeat(60));
-            console.log("🔗 QR CODE URL:");
-            console.log(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(base64QR)}`);
-            console.log("\n👆 COPY URL TRÊN, DÁN VÀO TRÌNH DUYỆT ĐỂ XEM QR!");
-            console.log("📱 Hoặc mở file 'qr.png' nếu đang chạy local");
-            console.log("=".repeat(60) + "\n");
-            return true;
-        } else {
-            console.log(`❌ Không tìm thấy file qr.png tại: ${qrPath}`);
-            
-            // Liệt kê tất cả file trong thư mục để debug
-            try {
-                const files = fs.readdirSync(__dirname);
-                console.log("📁 Files trong thư mục:", files);
-            } catch (listError) {
-                console.log("❌ Không thể liệt kê files:", listError.message);
-            }
-            return false;
-        }
-    } catch (error) {
-        console.log("⚠️ Không thể tạo QR URL:", error.message);
-        console.log("📋 Error details:", error);
-        return false;
-    }
-}
-
-// ============================================================
 // FUNCTION KHỞI ĐỘNG BOT
 // ============================================================
 async function startBot() {
@@ -183,113 +142,46 @@ async function startBot() {
     try {
         let api;
 
-        // Thử đăng nhập bằng session cũ
+        // Kiểm tra session file có tồn tại không
         if (fs.existsSync(SESSION_FILE)) {
-            console.log("📂 Đã tìm thấy session cũ");
-            console.log("🔐 Đang thử đăng nhập bằng session cũ...");
+            console.log("📂 Đã tìm thấy file session");
+            console.log("🔐 Đang thử đăng nhập bằng session...");
 
             try {
                 const sessionData = JSON.parse(fs.readFileSync(SESSION_FILE, "utf8"));
+                console.log("📋 Session data loaded successfully");
 
                 // Kiểm tra session hợp lệ (< 30 ngày)
                 const sessionAge = Date.now() - sessionData.timestamp;
                 if (sessionAge > 30 * 24 * 60 * 60 * 1000) {
-                    console.log("⚠️  Session quá cũ (>30 ngày), cần quét QR lại");
+                    console.log("⚠️  Session quá cũ (>30 ngày)");
                     fs.unlinkSync(SESSION_FILE);
+                    throw new Error("Session expired");
                 } else {
+                    console.log("✅ Session hợp lệ, đang đăng nhập...");
+                    
                     // Đăng nhập bằng context
                     api = await zalo.login(sessionData.context);
                     console.log("✅ Đăng nhập thành công bằng session!\n");
                 }
             } catch (error) {
-                console.log("⚠️  Session hết hạn, cần quét QR lại...\n");
-                fs.unlinkSync(SESSION_FILE);
+                console.log("⚠️  Không thể đăng nhập bằng session:", error.message);
+                console.log("🗑️  Xóa session cũ...");
+                if (fs.existsSync(SESSION_FILE)) {
+                    fs.unlinkSync(SESSION_FILE);
+                }
+                throw new Error("Session login failed");
             }
-        }
-
-        // Nếu không có session hoặc session hết hạn → Quét QR
-        if (!api) {
-            console.log("📱 QUÉT QR CODE:");
-            console.log("👉 Mở file 'qr.png' trong thư mục dự án");
-            console.log("👉 Quét bằng Zalo: Cá nhân → Thiết bị đã đăng nhập\n");
-
-            // Tạo QR URL ngay lập tức
-            console.log("🔍 Đang tạo QR code...");
+        } else {
+            console.log("❌ Không tìm thấy file session!");
+            console.log("💡 Cần tạo session từ Replit trước:");
+            console.log("   1. Chạy bot trên Replit");
+            console.log("   2. Quét QR code thành công");
+            console.log("   3. Download file 'zalo-session.json'");
+            console.log("   4. Upload lên GitHub");
+            console.log("   5. Deploy lại trên Render\n");
             
-            try {
-                // Thêm timeout cho loginQR()
-                const qrPromise = zalo.loginQR();
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('QR generation timeout after 30 seconds')), 30000);
-                });
-                
-                console.log("⏳ Đang chờ tạo QR code (timeout 30s)...");
-                api = await Promise.race([qrPromise, timeoutPromise]);
-                console.log("✅ QR code đã được tạo!");
-                
-            } catch (qrError) {
-                console.error("❌ Lỗi tạo QR code:", qrError.message);
-                console.log("💡 QR generation failed trên Render environment");
-                console.log("🔄 Bot sẽ dừng - cần dùng session từ Replit");
-                
-                throw qrError;
-            }
-            
-            // Tạo QR URL ngay sau khi loginQR() hoàn thành
-            console.log("🔄 Đang tạo QR URL...");
-
-            // Thử tạo QR URL nhiều lần với debug chi tiết
-            let qrUrlCreated = false;
-            for (let i = 0; i < 5; i++) {
-                console.log(`🔄 Thử lần ${i + 1}/5...`);
-                
-                if (generateQRUrl()) {
-                    qrUrlCreated = true;
-                    break;
-                }
-                
-                // Đợi 2 giây giữa các lần thử
-                if (i < 4) { // Không đợi ở lần cuối
-                    console.log("⏳ Đợi 2 giây...");
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            }
-
-            if (!qrUrlCreated) {
-                console.log("⚠️ Không thể tạo QR URL từ file sau 5 lần thử");
-                console.log("💡 Có thể file qr.png không được tạo trên Render");
-                console.log("💡 Thử mở file 'qr.png' trực tiếp nếu có");
-                
-                // Debug: Kiểm tra quyền ghi file
-                try {
-                    const testFile = path.join(__dirname, 'test-write.txt');
-                    fs.writeFileSync(testFile, 'test');
-                    fs.unlinkSync(testFile);
-                    console.log("✅ Có quyền ghi file trong thư mục");
-                } catch (writeError) {
-                    console.log("❌ Không có quyền ghi file:", writeError.message);
-                }
-            }
-
-            // Lưu session sau khi login thành công
-            if (api && api.getContext) {
-                try {
-                    const context = api.getContext();
-
-                    // Lưu TOÀN BỘ context
-                    const sessionData = {
-                        timestamp: Date.now(),
-                        loginMethod: "QR",
-                        context: context,
-                    };
-
-                    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2));
-                    console.log(`✅ Đã lưu session vào ${SESSION_FILE}`);
-                    console.log("💡 Lần sau sẽ tự động đăng nhập, không cần quét QR!\n");
-                } catch (err) {
-                    console.error("❌ Lỗi lưu session:", err.message);
-                }
-            }
+            throw new Error("No session file found");
         }
 
         console.log("=".repeat(60));
@@ -372,10 +264,12 @@ async function startBot() {
         console.log("=".repeat(60) + "\n");
     } catch (error) {
         console.error("\n❌ LỖI KHỞI ĐỘNG BOT:", error.message);
-        console.log("\n💡 Gợi ý:");
-        console.log("   - Kiểm tra kết nối internet");
-        console.log("   - Thử quét lại QR code");
-        console.log("   - Chạy lại bot: npm start\n");
+        console.log("\n💡 HƯỚNG DẪN TẠO SESSION:");
+        console.log("   1. Chạy bot trên Replit");
+        console.log("   2. Quét QR code thành công");
+        console.log("   3. Download file 'zalo-session.json'");
+        console.log("   4. Upload lên GitHub");
+        console.log("   5. Deploy lại trên Render\n");
         process.exit(1);
     }
 }
