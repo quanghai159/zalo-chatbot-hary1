@@ -200,6 +200,7 @@ async function startBot() {
                 }
 
                 try {
+                    // GỬI TIN NHẮN TRẢ LỜI
                     await api.sendMessage(
                         { msg: matchedKeyword.reply, quote: message.data },
                         threadId,
@@ -207,7 +208,16 @@ async function startBot() {
                     );
                     
                     logMessage(matchedKeyword.reply, threadId, threadType, true, "REPLIED");
-                    console.log(`📌 Đã đánh dấu chưa đọc\n`);
+                    
+                    // ✅ SỬA LỖI: THỰC SỰ ĐÁNH DẤU CHƯA ĐỌC
+                    try {
+                        await api.addUnreadMark(threadId, threadType);
+                        console.log(`📌 ✅ Đã đánh dấu chưa đọc thành công!`);
+                    } catch (unreadError) {
+                        console.error(`❌ Lỗi đánh dấu chưa đọc:`, unreadError.message);
+                    }
+                    
+                    console.log(`\n`);
                     
                 } catch (error) {
                     console.error("❌ Lỗi khi trả lời:", error.message);
